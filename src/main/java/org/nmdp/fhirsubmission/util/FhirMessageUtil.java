@@ -31,6 +31,6 @@ import java.util.List;
 public class FhirMessageUtil {
 
     public static List<Object> getPrimaryResources(FhirMessage message) {
-           
+
     }
 }
