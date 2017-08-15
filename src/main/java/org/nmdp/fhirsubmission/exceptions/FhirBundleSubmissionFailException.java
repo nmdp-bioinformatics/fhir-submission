@@ -1,7 +1,7 @@
-package org.nmdp.fhirsubmission.util;
+package org.nmdp.fhirsubmission.exceptions;
 
 /**
- * Created by Andrew S. Brown, Ph.D., <andrew@nmdp.org>, on 7/10/17.
+ * Created by Andrew S. Brown, Ph.D., <andrew@nmdp.org>, on 8/15/17.
  * <p>
  * fhir-submission
  * Copyright (c) 2012-2017 National Marrow Donor Program (NMDP)
@@ -24,24 +24,13 @@ package org.nmdp.fhirsubmission.util;
  * > http://www.opensource.org/licenses/lgpl-license.php
  */
 
-import org.nmdp.fhirsubmission.exceptions.FhirBundleSubmissionFailException;
-import org.nmdp.hmlfhirconvertermodels.domain.fhir.FhirMessage;
+public class FhirBundleSubmissionFailException extends Exception {
 
-import java.lang.annotation.Annotation;
-import java.util.Arrays;
-import java.util.List;
-
-public class FhirMessageUtil {
-
-   public static void submit(FhirMessage fhirMessage) throws FhirBundleSubmissionFailException {
-
-   }
-
-    private static List<Object> getPrimaryResources(FhirMessage message) {
-
+    public FhirBundleSubmissionFailException(String message) {
+        super(message);
     }
 
-    private static List<Object> traverseObject(Annotation annotation, Object obj) {
-       
+    public FhirBundleSubmissionFailException(String message, Exception ex) {
+        super(message, ex);
     }
 }
