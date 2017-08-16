@@ -24,6 +24,8 @@ package org.nmdp.fhirsubmission.util;
  * > http://www.opensource.org/licenses/lgpl-license.php
  */
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.nmdp.fhirsubmission.exceptions.FhirBundleSubmissionFailException;
 import org.nmdp.hmlfhirconvertermodels.attributes.FhirPrimaryResource;
 import org.nmdp.hmlfhirconvertermodels.attributes.FhirResource;
@@ -39,12 +41,15 @@ import java.util.stream.Collectors;
 
 public class FhirMessageUtil {
 
+    private static final Gson GSON = new GsonBuilder().create();
+
     public void submit(FhirMessage fhirMessage) throws Exception {
         getPrimaryResources(fhirMessage);
     }
 
     private List<Object> getPrimaryResources(FhirMessage message) throws FhirBundleSubmissionFailException {
         for (Patient patient : message.getPatients().getPatients()) {
+            String patientJson = GSON.toJson(patient);
             //List<Field> declaredFields = Arrays.asList(patient.getClass().getDeclaredFields());
             List<Field> declaredFields = getAllFields(patient.getClass());
             List<Object> fhirPrimaryResources = getFieldsImplementingAnnotation(FhirPrimaryResource.class, declaredFields);
@@ -91,6 +96,10 @@ public class FhirMessageUtil {
        }
 
        return resources;
+    }
+
+    private <T> T getFlatResource(T resource) {
+        
     }
 
     private List<Object> getFieldsImplementingAnnotation(Class<?> annotation, List<Field> fields) {
