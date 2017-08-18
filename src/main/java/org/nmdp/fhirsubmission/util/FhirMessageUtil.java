@@ -99,7 +99,7 @@ public class FhirMessageUtil {
     }
 
     private <T> T getFlatResource(T resource) {
-        
+        return resource;
     }
 
     private List<Object> getFieldsImplementingAnnotation(Class<?> annotation, List<Field> fields) {
