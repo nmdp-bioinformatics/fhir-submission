@@ -24,5 +24,57 @@ package org.nmdp.fhirsubmission.http;
  * > http://www.opensource.org/licenses/lgpl-license.php
  */
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializer;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.log4j.Logger;
+import org.nmdp.fhirsubmission.serialization.FhirResourceJsonSerializer;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+
 public class Post {
+
+    private static final Logger LOG = Logger.getLogger(Post.class);
+    private static final Gson GSON = new GsonBuilder().create();
+    private static final String HEADER_KEY = "Content-Type";
+    private static final String HEADER_VALUE = "application/json";
+
+    public <T> HttpResponse post(Object data, String url, JsonDeserializer deserializer, Class<T> clazz) {
+        HttpClient client = HttpClientBuilder.create().build();
+        HttpPost post = new HttpPost(url);
+        HttpResponse response = null;
+
+        try {
+            StringEntity json = null;
+
+            if (deserializer == null) {
+                json = new StringEntity(GSON.toJson(data));
+            } else {
+                FhirResourceJsonSerializer<T> serializer = new FhirResourceJsonSerializer<>();
+                Gson gson = new GsonBuilder().registerTypeAdapter(clazz, serializer)
+                        .setPrettyPrinting()
+                        .create();
+
+                json = new StringEntity(gson.toJson(data));
+            }
+
+            post.setEntity(json);
+            post.setHeader(HEADER_KEY, HEADER_VALUE);
+            response = client.execute(post);
+        } catch (UnsupportedEncodingException ex) {
+            LOG.error(ex);
+        } catch (IOException ex) {
+            LOG.error(ex);
+        } finally {
+            return response;
+        }
+    }
 }
