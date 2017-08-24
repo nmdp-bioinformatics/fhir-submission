@@ -28,10 +28,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.nmdp.fhirsubmission.exceptions.FhirBundleSubmissionFailException;
 import org.nmdp.fhirsubmission.http.Post;
-import org.nmdp.fhirsubmission.serialization.FhirResourceJsonSerializer;
 import org.nmdp.fhirsubmission.serialization.PatientJsonSerializer;
-import org.nmdp.hmlfhirconvertermodels.attributes.FhirPrimaryResource;
-import org.nmdp.hmlfhirconvertermodels.attributes.FhirResource;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.FhirMessage;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.Patient;
 
@@ -46,9 +43,17 @@ public class FhirMessageUtil {
 
     public void submit(FhirMessage fhirMessage) throws Exception {
         List<Patient> patients = getPrimaryResources(fhirMessage);
-        PatientJsonSerializer serializer = new PatientJsonSerializer();
 
-        patients.forEach(patient -> Post.post(patient, "http://fhirtest.b12x.org/baseDstu3/Patient?_format=json&_pretty=true&_summary=true", serializer, Patient.class));
+
+        patients.forEach(patient -> Post.post(getPatientJson(patient), "http://fhirtest.b12x.org/baseDstu3/Patient?_format=json&_pretty=true&_summary=true"));
+    }
+
+    private String getPatientJson(Patient patient) {
+        PatientJsonSerializer serializer = new PatientJsonSerializer();
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        gsonBuilder.registerTypeAdapter(Patient.class, serializer);
+        Gson gson = gsonBuilder.create();
+        return gson.toJson(patient);
     }
 
     private List<Patient> getPrimaryResources(FhirMessage message) throws FhirBundleSubmissionFailException {

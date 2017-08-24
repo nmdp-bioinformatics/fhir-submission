@@ -24,11 +24,6 @@ package org.nmdp.fhirsubmission.http;
  * > http://www.opensource.org/licenses/lgpl-license.php
  */
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonSerializer;
-
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
@@ -42,31 +37,19 @@ import java.io.UnsupportedEncodingException;
 public class Post {
 
     private static final Logger LOG = Logger.getLogger(Post.class);
-    private static final Gson GSON = new GsonBuilder().create();
     private static final String HEADER_KEY = "Content-Type";
     private static final String HEADER_VALUE = "application/json";
+    private static final HttpClient CLIENT = HttpClientBuilder.create().build();
 
-    public static <T> HttpResponse post(Object data, String url, JsonSerializer serializer, Class<T> clazz) {
-        HttpClient client = HttpClientBuilder.create().build();
+    public static HttpResponse post(String json, String url) {
         HttpPost post = new HttpPost(url);
         HttpResponse response = null;
 
         try {
-            StringEntity json = null;
-
-            if (serializer == null) {
-                json = new StringEntity(GSON.toJson(data));
-            } else {
-                Gson gson = new GsonBuilder().registerTypeAdapter(clazz, serializer)
-                        .setPrettyPrinting()
-                        .create();
-
-                json = new StringEntity(gson.toJson(data));
-            }
-
-            post.setEntity(json);
+            StringEntity entity = new StringEntity(json);
+            post.setEntity(entity);
             post.setHeader(HEADER_KEY, HEADER_VALUE);
-            response = client.execute(post);
+            response = CLIENT.execute(post);
         } catch (UnsupportedEncodingException ex) {
             LOG.error(ex);
         } catch (IOException ex) {

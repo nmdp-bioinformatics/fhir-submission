@@ -28,12 +28,13 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 
-import org.nmdp.hmlfhirconvertermodels.dto.fhir.Identifier;
-import org.nmdp.hmlfhirconvertermodels.dto.fhir.Patient;
+import com.google.gson.JsonSerializer;
+import org.nmdp.hmlfhirconvertermodels.domain.fhir.Identifier;
+import org.nmdp.hmlfhirconvertermodels.domain.fhir.Patient;
 
 import java.lang.reflect.Type;
 
-public class PatientJsonSerializer extends FhirResourceJsonSerializer<Patient> {
+public class PatientJsonSerializer implements JsonSerializer<Patient> {
 
     @Override
     public JsonElement serialize(Patient src, Type typeOfSource, JsonSerializationContext context) {
