@@ -24,6 +24,9 @@ package org.nmdp.fhirsubmission.http;
  * > http://www.opensource.org/licenses/lgpl-license.php
  */
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSerializer;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
@@ -39,13 +42,25 @@ public class Post {
     private static final Logger LOG = Logger.getLogger(Post.class);
     private static final String HEADER_KEY = "Content-Type";
     private static final String HEADER_VALUE = "application/json";
+    private static Gson GSON = new GsonBuilder().create();
     private static final HttpClient CLIENT = HttpClientBuilder.create().build();
 
-    public static HttpResponse post(String json, String url) {
+    public static <T> HttpResponse post(T data, String url, JsonSerializer serializer, Class<T> clazz) {
         HttpPost post = new HttpPost(url);
         HttpResponse response = null;
 
         try {
+            String json;
+
+            if (serializer == null) {
+                json = GSON.toJson(data);
+            } else {
+                GsonBuilder gsonBuilder = new GsonBuilder();
+                gsonBuilder.registerTypeAdapter(clazz, serializer);
+                Gson gson = gsonBuilder.create();
+                json = gson.toJson(data);
+            }
+
             StringEntity entity = new StringEntity(json);
             post.setEntity(entity);
             post.setHeader(HEADER_KEY, HEADER_VALUE);
