@@ -1,7 +1,7 @@
-package org.nmdp.fhirsubmission;
+package org.nmdp.fhirsubmission.serialization;
 
 /**
- * Created by Andrew S. Brown, Ph.D., <andrew@nmdp.org>, on 7/10/17.
+ * Created by Andrew S. Brown, Ph.D., <andrew@nmdp.org>, on 8/23/17.
  * <p>
  * fhir-submission
  * Copyright (c) 2012-2017 National Marrow Donor Program (NMDP)
@@ -24,12 +24,28 @@ package org.nmdp.fhirsubmission;
  * > http://www.opensource.org/licenses/lgpl-license.php
  */
 
-import org.nmdp.hmlfhirconvertermodels.domain.fhir.FhirMessage;
-import org.nmdp.fhirsubmission.util.FhirMessageUtil;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSerializationContext;
 
-public class FhirSubmission {
+import org.nmdp.hmlfhirconvertermodels.dto.fhir.Identifier;
+import org.nmdp.hmlfhirconvertermodels.dto.fhir.Patient;
 
-    public void submitPreFhirBundle(FhirMessage fhirMessage) {
-        FhirMessageUtil fhirUtil = new FhirMessageUtil();
+import java.lang.reflect.Type;
+
+public class PatientJsonSerializer extends FhirResourceJsonSerializer<Patient> {
+
+    @Override
+    public JsonElement serialize(Patient src, Type typeOfSource, JsonSerializationContext context) {
+        JsonObject json = new JsonObject();
+        JsonObject identifier = new JsonObject();
+        Identifier id = src.getIdentifier();
+        String idValue = id.getSystem() + "*" + id.getValue();
+
+        json.addProperty("resourceType", "Patient");
+        identifier.addProperty("value", idValue);
+        json.add("identifier", identifier);
+
+        return json;
     }
 }

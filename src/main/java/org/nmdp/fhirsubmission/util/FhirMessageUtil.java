@@ -27,6 +27,9 @@ package org.nmdp.fhirsubmission.util;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.nmdp.fhirsubmission.exceptions.FhirBundleSubmissionFailException;
+import org.nmdp.fhirsubmission.http.Post;
+import org.nmdp.fhirsubmission.serialization.FhirResourceJsonSerializer;
+import org.nmdp.fhirsubmission.serialization.PatientJsonSerializer;
 import org.nmdp.hmlfhirconvertermodels.attributes.FhirPrimaryResource;
 import org.nmdp.hmlfhirconvertermodels.attributes.FhirResource;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.FhirMessage;
@@ -41,19 +44,23 @@ import java.util.stream.Collectors;
 
 public class FhirMessageUtil {
 
-    private static final Gson GSON = new GsonBuilder().create();
-
     public void submit(FhirMessage fhirMessage) throws Exception {
-        getPrimaryResources(fhirMessage);
+        List<Patient> patients = getPrimaryResources(fhirMessage);
+        PatientJsonSerializer serializer = new PatientJsonSerializer();
+
+        patients.forEach(patient -> Post.post(patient, "http://fhirtest.b12x.org/baseDstu3/Patient?_format=json&_pretty=true&_summary=true", serializer, Patient.class));
     }
 
-    private List<Object> getPrimaryResources(FhirMessage message) throws FhirBundleSubmissionFailException {
-        for (Patient patient : message.getPatients().getPatients()) {
-            String patientJson = GSON.toJson(patient);
-            //List<Field> declaredFields = Arrays.asList(patient.getClass().getDeclaredFields());
-            List<Field> declaredFields = getAllFields(patient.getClass());
-            List<Object> fhirPrimaryResources = getFieldsImplementingAnnotation(FhirPrimaryResource.class, declaredFields);
-            List<Object> fhirResources = getFieldsImplementingAnnotation(FhirResource.class, declaredFields);
+    private List<Patient> getPrimaryResources(FhirMessage message) throws FhirBundleSubmissionFailException {
+
+        return message.getPatients().getPatients();
+
+//        for (Patient patient : message.getPatients().getPatients()) {
+//            String patientJson = GSON.toJson(patient);
+//            //List<Field> declaredFields = Arrays.asList(patient.getClass().getDeclaredFields());
+//            List<Field> declaredFields = getAllFields(patient.getClass());
+//            List<Object> fhirPrimaryResources = getFieldsImplementingAnnotation(FhirPrimaryResource.class, declaredFields);
+//            List<Object> fhirResources = getFieldsImplementingAnnotation(FhirResource.class, declaredFields);
 
 //            List<Object> fhirPrimaryResources = declaredFields.stream()
 //                    .filter(Objects::nonNull)
@@ -64,9 +71,9 @@ public class FhirMessageUtil {
 //                    .filter(Objects::nonNull)
 //                    .map(field -> traverseObject(FhirResource.class, field))
 //                    .collect(Collectors.toList());
-        }
-
-        return Arrays.asList(new Object());
+//        }
+//
+//        return Arrays.asList(new Object());
     }
 
     private List<Field> getAllFields(Class clazz) {
