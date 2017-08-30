@@ -36,16 +36,22 @@ import java.lang.reflect.Type;
 
 public class PatientJsonSerializer implements JsonSerializer<Patient> {
 
+    private static final String RESOURCE_TYPE_KEY = "resourceType";
+    private static final String RESOURCE_TYPE = "Patient";
+    private static final String VALUE_KEY = "value";
+    private static final String IDENTIFIER_KEY = "identifier";
+    private static final String SEPARATOR = "*";
+
     @Override
     public JsonElement serialize(Patient src, Type typeOfSource, JsonSerializationContext context) {
         JsonObject json = new JsonObject();
         JsonObject identifier = new JsonObject();
         Identifier id = src.getIdentifier();
-        String idValue = id.getSystem() + "*" + id.getValue();
+        String idValue = id.getSystem() + SEPARATOR + id.getValue();
 
-        json.addProperty("resourceType", "Patient");
-        identifier.addProperty("value", idValue);
-        json.add("identifier", identifier);
+        json.addProperty(RESOURCE_TYPE_KEY, RESOURCE_TYPE);
+        identifier.addProperty(VALUE_KEY, idValue);
+        json.add(IDENTIFIER_KEY, identifier);
 
         return json;
     }
