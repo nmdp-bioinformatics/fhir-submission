@@ -28,14 +28,37 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
+import org.nmdp.fhirsubmission.object.FhirSubmissionResponse;
+import org.nmdp.hmlfhirconvertermodels.domain.fhir.Identifier;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.Specimen;
 
 import java.lang.reflect.Type;
 
 public class SpecimenJsonSerializer implements JsonSerializer<Specimen> {
 
+    private static final String RESOURCE_TYPE_KEY = "resourceType";
+    private static final String RESOURCE_TYPE = "Specimen";
+    private static final String VALUE_KEY = "value";
+    private static final String IDENTIFIER_KEY = "identifier";
+    private static final String SUBJECT_KEY = "subject";
+    private static final String REFERENCE_KEY = "reference";
+    private static final String SEPARATOR = "*";
+
     @Override
     public JsonElement serialize(Specimen src, Type typeOfSource, JsonSerializationContext context) {
-        return new JsonObject();
+        JsonObject specimen = new JsonObject();
+        JsonObject identifier = new JsonObject();
+        JsonObject subject = new JsonObject();
+        Identifier id = src.getIdentifier();
+        FhirSubmissionResponse response = (FhirSubmissionResponse) src.getSubject();
+        String idValue = id.getSystem() + SEPARATOR + id.getValue();
+
+        specimen.addProperty(RESOURCE_TYPE_KEY, RESOURCE_TYPE);
+        subject.addProperty(REFERENCE_KEY, response.getUrl());
+        identifier.addProperty(VALUE_KEY, idValue);
+        specimen.add(IDENTIFIER_KEY, identifier);
+        specimen.add(SUBJECT_KEY, subject);
+
+        return specimen;
     }
 }

@@ -29,8 +29,12 @@ import org.nmdp.fhirsubmission.exceptions.FhirBundleSubmissionFailException;
 import org.nmdp.fhirsubmission.http.Post;
 import org.nmdp.fhirsubmission.object.FhirSubmissionResponse;
 import org.nmdp.fhirsubmission.serialization.PatientJsonSerializer;
+import org.nmdp.fhirsubmission.serialization.SpecimenJsonSerializer;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.FhirMessage;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.Patient;
+import org.nmdp.hmlfhirconvertermodels.domain.fhir.Specimen;
+import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Specimens;
+import org.nmdp.hmlfhirconvertermodels.domain.hml.Sample;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -48,6 +52,8 @@ public class FhirMessageUtil {
     private static final String SPECIMEN = "Specimen";
 
     private static final PatientJsonSerializer PATIENT_SERIALIZER = new PatientJsonSerializer();
+    private static final SpecimenJsonSerializer SPECIMEN_SERIALIZER = new SpecimenJsonSerializer();
+
     private static final Logger LOG = Logger.getLogger(FhirMessageUtil.class);
 
     public void submit(FhirMessage fhirMessage) throws Exception {
@@ -61,6 +67,21 @@ public class FhirMessageUtil {
         try {
             FhirSubmissionResponse response = HttpResponseExtractor
                     .parse(Post.post(patient, patientUrl, PATIENT_SERIALIZER, Patient.class));
+            List<Specimen> specimens = patient.getSpecimens().getSpecimens();
+            specimens.forEach(specimen -> specimen.setSubject(response));
+            specimens.forEach(specimen -> submitSpecimenTree(specimen));
+        } catch (FhirBundleSubmissionFailException ex) {
+            LOG.error(ex);
+        }
+    }
+
+    private void submitSpecimenTree(Specimen specimen) {
+        final String specimenUrl = URL + SPECIMEN + QUERY_STRING;
+
+        try {
+            FhirSubmissionResponse response = HttpResponseExtractor
+                    .parse(Post.post(specimen, specimenUrl, SPECIMEN_SERIALIZER, Specimen.class));
+
         } catch (FhirBundleSubmissionFailException ex) {
             LOG.error(ex);
         }
