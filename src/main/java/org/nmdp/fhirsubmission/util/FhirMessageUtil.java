@@ -24,6 +24,7 @@ package org.nmdp.fhirsubmission.util;
  * > http://www.opensource.org/licenses/lgpl-license.php
  */
 
+import org.apache.log4j.Logger;
 import org.nmdp.fhirsubmission.exceptions.FhirBundleSubmissionFailException;
 import org.nmdp.fhirsubmission.http.Post;
 import org.nmdp.fhirsubmission.object.FhirSubmissionResponse;
@@ -47,6 +48,7 @@ public class FhirMessageUtil {
     private static final String SPECIMEN = "Specimen";
 
     private static final PatientJsonSerializer PATIENT_SERIALIZER = new PatientJsonSerializer();
+    private static final Logger LOG = Logger.getLogger(FhirMessageUtil.class);
 
     public void submit(FhirMessage fhirMessage) throws Exception {
         List<Patient> patients = getPrimaryResources(fhirMessage);
@@ -55,10 +57,13 @@ public class FhirMessageUtil {
 
     private void submitPatientTree(Patient patient) {
         final String patientUrl = URL + PATIENT + QUERY_STRING;
-        FhirSubmissionResponse response = HttpResponseExtractor
-                .parse(Post.post(patient, patientUrl, PATIENT_SERIALIZER, Patient.class));
 
-
+        try {
+            FhirSubmissionResponse response = HttpResponseExtractor
+                    .parse(Post.post(patient, patientUrl, PATIENT_SERIALIZER, Patient.class));
+        } catch (FhirBundleSubmissionFailException ex) {
+            LOG.error(ex);
+        }
     }
 
     private List<Patient> getPrimaryResources(FhirMessage message) throws FhirBundleSubmissionFailException {
