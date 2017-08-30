@@ -40,17 +40,41 @@ public class PatientJsonSerializer implements JsonSerializer<Patient> {
     private static final String RESOURCE_TYPE = "Patient";
     private static final String VALUE_KEY = "value";
     private static final String IDENTIFIER_KEY = "identifier";
+    private static final String REFERENCE_KEY = "reference";
+    private static final String ASSIGNER_KEY = "assigner";
+    private static final String ASSIGNER_VALUE = "CIBMTR";
+    private static final String SYSTEM_KEY = "system";
+    private static final String CODE_KEY = "code";
+    private static final String CODE_VALUE = "DR";
+    private static final String SYSTEM_VALUE = "http://hl7.org/fhir/v2/0203";
+    private static final String CODING_KEY = "coding";
+    private static final String TYPE_KEY = "type";
     private static final String SEPARATOR = "*";
 
     @Override
     public JsonElement serialize(Patient src, Type typeOfSource, JsonSerializationContext context) {
         JsonObject json = new JsonObject();
         JsonObject identifier = new JsonObject();
+        JsonObject assigner = new JsonObject();
+        JsonObject system = new JsonObject();
+        JsonObject code = new JsonObject();
+        JsonObject coding = new JsonObject();
+        JsonObject type = new JsonObject();
+        JsonObject reference = new JsonObject();
         Identifier id = src.getIdentifier();
         String idValue = id.getSystem() + SEPARATOR + id.getValue();
 
+        system.addProperty(VALUE_KEY, SYSTEM_VALUE);
+        code.addProperty(VALUE_KEY, CODE_VALUE);
+        coding.add(SYSTEM_KEY, system);
+        coding.add(CODE_KEY, code);
+        type.add(CODING_KEY, coding);
+        reference.addProperty(VALUE_KEY, ASSIGNER_VALUE);
+        assigner.add(REFERENCE_KEY, reference);
         json.addProperty(RESOURCE_TYPE_KEY, RESOURCE_TYPE);
+        json.add(ASSIGNER_KEY, assigner);
         identifier.addProperty(VALUE_KEY, idValue);
+        identifier.add(TYPE_KEY, type);
         json.add(IDENTIFIER_KEY, identifier);
 
         return json;
