@@ -26,6 +26,7 @@ package org.nmdp.fhirsubmission.util;
 
 import org.nmdp.fhirsubmission.exceptions.FhirBundleSubmissionFailException;
 import org.nmdp.fhirsubmission.http.Post;
+import org.nmdp.fhirsubmission.object.FhirSubmissionResponse;
 import org.nmdp.fhirsubmission.serialization.PatientJsonSerializer;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.FhirMessage;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.Patient;
@@ -39,11 +40,25 @@ import java.util.stream.Collectors;
 
 public class FhirMessageUtil {
 
+    private static final String URL = "http://fhirtest.b12x.org/baseDstu3/";
+    private static final String QUERY_STRING = "?_format=json&_pretty=true&_summary=true";
+
+    private static final String PATIENT = "Patient";
+    private static final String SPECIMEN = "Specimen";
+
+    private static final PatientJsonSerializer PATIENT_SERIALIZER = new PatientJsonSerializer();
+
     public void submit(FhirMessage fhirMessage) throws Exception {
         List<Patient> patients = getPrimaryResources(fhirMessage);
-        PatientJsonSerializer serializer = new PatientJsonSerializer();
+        patients.forEach(patient -> submitPatientTree(patient));
+    }
 
-        patients.forEach(patient -> Post.post(patient, "http://fhirtest.b12x.org/baseDstu3/Patient?_format=json&_pretty=true&_summary=true", serializer, Patient.class));
+    private void submitPatientTree(Patient patient) {
+        final String patientUrl = URL + PATIENT + QUERY_STRING;
+        FhirSubmissionResponse response = HttpResponseExtractor
+                .parse(Post.post(patient, patientUrl, PATIENT_SERIALIZER, Patient.class));
+
+
     }
 
     private List<Patient> getPrimaryResources(FhirMessage message) throws FhirBundleSubmissionFailException {
