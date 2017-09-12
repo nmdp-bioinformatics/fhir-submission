@@ -27,8 +27,8 @@ package org.nmdp.fhirsubmission.serialization;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
-
 import com.google.gson.JsonSerializer;
+
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.Identifier;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.Patient;
 
@@ -56,25 +56,23 @@ public class PatientJsonSerializer implements JsonSerializer<Patient> {
         JsonObject json = new JsonObject();
         JsonObject identifier = new JsonObject();
         JsonObject assigner = new JsonObject();
-        JsonObject system = new JsonObject();
-        JsonObject code = new JsonObject();
         JsonObject coding = new JsonObject();
         JsonObject type = new JsonObject();
-        JsonObject reference = new JsonObject();
+
         Identifier id = src.getIdentifier();
         String idValue = id.getSystem() + SEPARATOR + id.getValue();
 
-        system.addProperty(VALUE_KEY, SYSTEM_VALUE);
-        code.addProperty(VALUE_KEY, CODE_VALUE);
-        coding.add(SYSTEM_KEY, system);
-        coding.add(CODE_KEY, code);
+        coding.addProperty(SYSTEM_KEY, SYSTEM_VALUE);
+        coding.addProperty(CODE_KEY, CODE_VALUE);
+
         type.add(CODING_KEY, coding);
-        reference.addProperty(VALUE_KEY, ASSIGNER_VALUE);
-        assigner.add(REFERENCE_KEY, reference);
-        json.addProperty(RESOURCE_TYPE_KEY, RESOURCE_TYPE);
-        json.add(ASSIGNER_KEY, assigner);
+        assigner.addProperty(REFERENCE_KEY, ASSIGNER_VALUE);
+
         identifier.addProperty(VALUE_KEY, idValue);
         identifier.add(TYPE_KEY, type);
+        identifier.add(ASSIGNER_KEY, assigner);
+
+        json.addProperty(RESOURCE_TYPE_KEY, RESOURCE_TYPE);
         json.add(IDENTIFIER_KEY, identifier);
 
         return json;

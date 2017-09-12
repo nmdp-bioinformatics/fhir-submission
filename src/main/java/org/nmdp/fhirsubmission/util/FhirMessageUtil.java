@@ -28,6 +28,7 @@ import org.apache.log4j.Logger;
 import org.nmdp.fhirsubmission.exceptions.FhirBundleSubmissionFailException;
 import org.nmdp.fhirsubmission.http.Post;
 import org.nmdp.fhirsubmission.object.FhirSubmissionResponse;
+import org.nmdp.fhirsubmission.serialization.DiagnosticReportSerializer;
 import org.nmdp.fhirsubmission.serialization.PatientJsonSerializer;
 import org.nmdp.fhirsubmission.serialization.SpecimenJsonSerializer;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.FhirMessage;
@@ -50,9 +51,11 @@ public class FhirMessageUtil {
 
     private static final String PATIENT = "Patient";
     private static final String SPECIMEN = "Specimen";
+    private static final String DIAGNOSTIC_REPORT = "DiagnosticReport";
 
     private static final PatientJsonSerializer PATIENT_SERIALIZER = new PatientJsonSerializer();
     private static final SpecimenJsonSerializer SPECIMEN_SERIALIZER = new SpecimenJsonSerializer();
+    private static final DiagnosticReportSerializer DIAGNOSTIC_REPORT_SERIALIZER = new DiagnosticReportSerializer();
 
     private static final Logger LOG = Logger.getLogger(FhirMessageUtil.class);
 
@@ -81,7 +84,19 @@ public class FhirMessageUtil {
         try {
             FhirSubmissionResponse response = HttpResponseExtractor
                     .parse(Post.post(specimen, specimenUrl, SPECIMEN_SERIALIZER, Specimen.class));
+            specimen.setReference(response);
+            submitDiagnosticReportTree(specimen);
+        } catch (FhirBundleSubmissionFailException ex) {
+            LOG.error(ex);
+        }
+    }
 
+    private void submitDiagnosticReportTree(Specimen specimen) {
+        final String diagnosticReportUrl = URL + DIAGNOSTIC_REPORT + QUERY_STRING;
+
+        try {
+            FhirSubmissionResponse response = HttpResponseExtractor
+                    .parse(Post.post(specimen, diagnosticReportUrl, DIAGNOSTIC_REPORT_SERIALIZER, Specimen.class));
         } catch (FhirBundleSubmissionFailException ex) {
             LOG.error(ex);
         }

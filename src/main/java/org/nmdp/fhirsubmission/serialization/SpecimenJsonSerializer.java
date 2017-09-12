@@ -42,22 +42,43 @@ public class SpecimenJsonSerializer implements JsonSerializer<Specimen> {
     private static final String IDENTIFIER_KEY = "identifier";
     private static final String SUBJECT_KEY = "subject";
     private static final String REFERENCE_KEY = "reference";
-    private static final String SEPARATOR = "*";
+    private static final String SYSTEM_KEY = "system";
+    private static final String CODE_KEY = "code";
+    private static final String DISPLAY_KEY = "display";
+    private static final String CODING_KEY = "coding";
+    private static final String TYPE_KEY = "type";
+
+    private static final String SYSTEM_VALUE = "http://snowmed.info/sct";
+    private static final String CODE_VALUE = "258564008";
+    private static final String DISPLAY_VALUE = "Buccal smear sample";
 
     @Override
     public JsonElement serialize(Specimen src, Type typeOfSource, JsonSerializationContext context) {
         JsonObject specimen = new JsonObject();
         JsonObject identifier = new JsonObject();
         JsonObject subject = new JsonObject();
+        JsonObject type = new JsonObject();
+        JsonObject coding = new JsonObject();
+
         Identifier id = src.getIdentifier();
         FhirSubmissionResponse response = (FhirSubmissionResponse) src.getSubject();
-        String idValue = id.getSystem() + SEPARATOR + id.getValue();
+
+        identifier.addProperty(VALUE_KEY, id.getValue());
+//        identifier.addProperty(SYSTEM_KEY, id.getSystem());
+        identifier.addProperty(SYSTEM_KEY, "http://bethematch.org/center-code/001");
+
+        coding.addProperty(SYSTEM_KEY, SYSTEM_VALUE);
+        coding.addProperty(CODE_KEY, CODE_VALUE);;
+        coding.addProperty(DISPLAY_KEY, DISPLAY_VALUE);
+        type.add(CODING_KEY, coding);
+
+
+        subject.addProperty(REFERENCE_KEY, response.getUrl());
 
         specimen.addProperty(RESOURCE_TYPE_KEY, RESOURCE_TYPE);
-        subject.addProperty(REFERENCE_KEY, response.getUrl());
-        identifier.addProperty(VALUE_KEY, idValue);
         specimen.add(IDENTIFIER_KEY, identifier);
         specimen.add(SUBJECT_KEY, subject);
+        specimen.add(TYPE_KEY, type);
 
         return specimen;
     }
