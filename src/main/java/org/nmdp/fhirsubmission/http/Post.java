@@ -33,6 +33,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.log4j.Logger;
+import org.nmdp.fhirsubmission.serialization.ObservationJsonSerializer;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;

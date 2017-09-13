@@ -28,14 +28,12 @@ import org.apache.log4j.Logger;
 import org.nmdp.fhirsubmission.exceptions.FhirBundleSubmissionFailException;
 import org.nmdp.fhirsubmission.http.Post;
 import org.nmdp.fhirsubmission.object.FhirSubmissionResponse;
-import org.nmdp.fhirsubmission.serialization.DiagnosticReportSerializer;
+import org.nmdp.fhirsubmission.serialization.DiagnosticReportJsonSerializer;
 import org.nmdp.fhirsubmission.serialization.PatientJsonSerializer;
 import org.nmdp.fhirsubmission.serialization.SpecimenJsonSerializer;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.FhirMessage;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.Patient;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.Specimen;
-import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Specimens;
-import org.nmdp.hmlfhirconvertermodels.domain.hml.Sample;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -55,7 +53,7 @@ public class FhirMessageUtil {
 
     private static final PatientJsonSerializer PATIENT_SERIALIZER = new PatientJsonSerializer();
     private static final SpecimenJsonSerializer SPECIMEN_SERIALIZER = new SpecimenJsonSerializer();
-    private static final DiagnosticReportSerializer DIAGNOSTIC_REPORT_SERIALIZER = new DiagnosticReportSerializer();
+    private static final DiagnosticReportJsonSerializer DIAGNOSTIC_REPORT_SERIALIZER = new DiagnosticReportJsonSerializer();
 
     private static final Logger LOG = Logger.getLogger(FhirMessageUtil.class);
 

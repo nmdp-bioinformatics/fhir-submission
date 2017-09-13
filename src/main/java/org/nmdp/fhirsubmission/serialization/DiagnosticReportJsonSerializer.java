@@ -31,15 +31,14 @@ import org.nmdp.hmlfhirconvertermodels.domain.fhir.*;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Glstrings;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Observations;
 
-import javax.print.DocFlavor;
 import java.lang.reflect.Type;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
-public class DiagnosticReportSerializer implements JsonSerializer<Specimen> {
+public class DiagnosticReportJsonSerializer implements JsonSerializer<Specimen> {
 
     private static final String STATUS_KEY = "status";
     private static final String EFFECTIVE_DATE_TIME_KEY = "effectiveDateTime";
@@ -53,10 +52,15 @@ public class DiagnosticReportSerializer implements JsonSerializer<Specimen> {
     private static final String CATEGORY_KEY = "category";
     private static final String RESOURCE_KEY = "resourceType";
     private static final String VALUE_KEY = "value";
-    private static final String RESULTS_KEY = "results";
+    private static final String RESULT_KEY = "result";
     private static final String SUBJECT_KEY = "subject";
     private static final String SPECIMEN_KEY = "specimen";
     private static final String PERFORMER_KEY = "performer";
+    private static final String EXTENSION_KEY = "extension";
+    private static final String XMLNS_KEY = "xmlns";
+    private static final String URL_KEY = "url";
+    private static final String VALUE_STRING_KEY = "valueString";
+    private static final String VALUE_URI_KEY = "valueUri";
 
     private static final String RESOURCE_VALUE = "DiagnosticReport";
     private static final String STATUS_VALUE = "final";
@@ -68,8 +72,15 @@ public class DiagnosticReportSerializer implements JsonSerializer<Specimen> {
     private static final String CATEGORY_CODE_DISPLAY = "Genetics";
     private static final String REFERENCE_VALUE = "urn:uuid:9243cc20-27bd-4f87-ba90-0328ed474950";
     private static final String REFERENCE_DISPLAY_VALUE = "Typing Laboratory";
+    private static final String EXTENSION_VALUE_VALUE = "text";
+    private static final String VALUE_URI_VALUE = "https://gl.nmdp.org/imgt-hla/3.23.0/multilocus-unphased-genotype/ez";
+    private static final String EXTENSION_URI_VALUE = "url";
+    private static final String XMLNS_VALUE = "http://hl7.org/fhir";
+    private static final String EXTENSION_URL_VALUE = "http://hl7.org/fhir/StructureDefinition/hla-genotyping-resultsGlstring";
 
     private static final String BLANK = "";
+    private static final String GL_STRING_JOINING_CHARACTER = "+";
+    private static final String GL_STRING_ALLELE_JOINING_CHARACTER = "^";
 
     @Override
     public JsonElement serialize(Specimen src, Type typeOfSource, JsonSerializationContext context) {
@@ -82,10 +93,16 @@ public class DiagnosticReportSerializer implements JsonSerializer<Specimen> {
         JsonObject subject = new JsonObject();
         JsonObject specimen = new JsonObject();
         JsonObject performer = new JsonObject();
+        JsonObject glStringExtension = new JsonObject();
+        JsonArray glStringExtensions = new JsonArray();
+        JsonObject glStringExtensionUri = new JsonObject();
+        JsonArray glStrings = new JsonArray();
+        JsonObject glStringExtensionValue = new JsonObject();
         JsonArray results = new JsonArray();
         Observations observations = src.getObservations();
         FhirSubmissionResponse response = (FhirSubmissionResponse) src.getSubject();
         FhirSubmissionResponse reference = (FhirSubmissionResponse) src.getReference();
+        List<List<String>> glSegments = new ArrayList<>();
 
         diagnosticReport.addProperty(RESOURCE_KEY, RESOURCE_VALUE);
         diagnosticReport.addProperty(STATUS_KEY, STATUS_VALUE);
@@ -116,25 +133,45 @@ public class DiagnosticReportSerializer implements JsonSerializer<Specimen> {
 
         for (Observation observation : observations.getObservations()) {
             Glstrings glstrings = observation.getGlstrings();
+            List<String> gls = new ArrayList<>();
 
             for (Glstring glstring : glstrings.getGlstrings()) {
                 JsonObject result = new JsonObject();
                 String glStringValue = glstring.getValue();
 
+                gls.add(glStringValue);
                 result.addProperty(VALUE_KEY, glStringValue);
                 result.addProperty(DISPLAY_KEY, glStringValue);
                 results.add(result);
             }
 
+            glSegments.add(gls);
         }
 
-        diagnosticReport.add(RESULTS_KEY, results);
+        String alleleGlstring = glSegments.stream().map(allele -> allele
+            .stream().collect(Collectors.joining(GL_STRING_JOINING_CHARACTER)))
+            .collect(Collectors.toList())
+                .stream().collect(Collectors.joining(GL_STRING_ALLELE_JOINING_CHARACTER));
+
+        glStringExtensionValue.addProperty(VALUE_STRING_KEY, alleleGlstring);
+        glStringExtensionValue.addProperty(URL_KEY, EXTENSION_VALUE_VALUE);
+        glStringExtensionUri.addProperty(VALUE_URI_KEY, VALUE_URI_VALUE);
+        glStringExtensionUri.addProperty(URL_KEY, EXTENSION_URI_VALUE);
+        glStrings.add(glStringExtensionUri);
+        glStrings.add(glStringExtensionValue);
+        glStringExtension.addProperty(XMLNS_KEY, XMLNS_VALUE);
+        glStringExtension.addProperty(URL_KEY, EXTENSION_URL_VALUE);
+        glStringExtension.add(EXTENSION_KEY, glStrings);
+        glStringExtensions.add(glStringExtension);
+
+        diagnosticReport.add(RESULT_KEY, results);
         diagnosticReport.add(CODE_KEY, code);
-        //diagnosticReport.add(CATEGORY_KEY, category);
+        diagnosticReport.add(CATEGORY_KEY, category);
         diagnosticReport.add(BASED_ON_KEY, basedOn);
         diagnosticReport.add(SUBJECT_KEY, subject);
         diagnosticReport.add(SPECIMEN_KEY, specimen);
         diagnosticReport.add(PERFORMER_KEY, performer);
+        diagnosticReport.add(EXTENSION_KEY, glStringExtensions);
 
         return diagnosticReport;
     }
