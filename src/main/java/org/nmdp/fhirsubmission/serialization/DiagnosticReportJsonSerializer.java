@@ -47,7 +47,6 @@ public class DiagnosticReportJsonSerializer implements JsonSerializer<Specimen> 
     private static final String CODE_KEY = "code";
     private static final String DISPLAY_KEY = "display";
     private static final String CODING_KEY = "coding";
-    private static final String REFERENCE_KEY = "reference";
     private static final String BASED_ON_KEY = "basedOn";
     private static final String CATEGORY_KEY = "category";
     private static final String RESOURCE_KEY = "resourceType";
@@ -61,6 +60,7 @@ public class DiagnosticReportJsonSerializer implements JsonSerializer<Specimen> 
     private static final String URL_KEY = "url";
     private static final String VALUE_STRING_KEY = "valueString";
     private static final String VALUE_URI_KEY = "valueUri";
+    private static final String REFERENCE_KEY = "reference";
 
     private static final String RESOURCE_VALUE = "DiagnosticReport";
     private static final String STATUS_VALUE = "final";
@@ -138,9 +138,9 @@ public class DiagnosticReportJsonSerializer implements JsonSerializer<Specimen> 
             for (Glstring glstring : glstrings.getGlstrings()) {
                 JsonObject result = new JsonObject();
                 String glStringValue = glstring.getValue();
-
+                FhirSubmissionResponse observationResponse = (FhirSubmissionResponse) observation.getValue();
                 gls.add(glStringValue);
-                result.addProperty(VALUE_KEY, glStringValue);
+                result.addProperty(REFERENCE_KEY, observationResponse.getUrl());
                 result.addProperty(DISPLAY_KEY, glStringValue);
                 results.add(result);
             }

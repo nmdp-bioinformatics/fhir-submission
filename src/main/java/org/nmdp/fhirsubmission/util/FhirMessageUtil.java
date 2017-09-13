@@ -25,21 +25,20 @@ package org.nmdp.fhirsubmission.util;
  */
 
 import org.apache.log4j.Logger;
+import org.nmdp.fhirsubmission.FhirSubmission;
 import org.nmdp.fhirsubmission.exceptions.FhirBundleSubmissionFailException;
 import org.nmdp.fhirsubmission.http.Post;
 import org.nmdp.fhirsubmission.object.FhirSubmissionResponse;
 import org.nmdp.fhirsubmission.serialization.DiagnosticReportJsonSerializer;
+import org.nmdp.fhirsubmission.serialization.ObservationJsonSerializer;
 import org.nmdp.fhirsubmission.serialization.PatientJsonSerializer;
 import org.nmdp.fhirsubmission.serialization.SpecimenJsonSerializer;
-import org.nmdp.hmlfhirconvertermodels.domain.fhir.FhirMessage;
-import org.nmdp.hmlfhirconvertermodels.domain.fhir.Patient;
-import org.nmdp.hmlfhirconvertermodels.domain.fhir.Specimen;
+import org.nmdp.hmlfhirconvertermodels.domain.fhir.*;
+import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Glstrings;
+import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Observations;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class FhirMessageUtil {
@@ -50,10 +49,14 @@ public class FhirMessageUtil {
     private static final String PATIENT = "Patient";
     private static final String SPECIMEN = "Specimen";
     private static final String DIAGNOSTIC_REPORT = "DiagnosticReport";
+    private static final String OBSERVATION = "Observation";
+
+    private static final String SPLIT_CHAR_GL_STRING = "\\*";
 
     private static final PatientJsonSerializer PATIENT_SERIALIZER = new PatientJsonSerializer();
     private static final SpecimenJsonSerializer SPECIMEN_SERIALIZER = new SpecimenJsonSerializer();
     private static final DiagnosticReportJsonSerializer DIAGNOSTIC_REPORT_SERIALIZER = new DiagnosticReportJsonSerializer();
+    private static final ObservationJsonSerializer OBSERVATION_SERIALIZER = new ObservationJsonSerializer();
 
     private static final Logger LOG = Logger.getLogger(FhirMessageUtil.class);
 
@@ -70,22 +73,60 @@ public class FhirMessageUtil {
                     .parse(Post.post(patient, patientUrl, PATIENT_SERIALIZER, Patient.class));
             List<Specimen> specimens = patient.getSpecimens().getSpecimens();
             specimens.forEach(specimen -> specimen.setSubject(response));
-            specimens.forEach(specimen -> submitSpecimenTree(specimen));
+            specimens.forEach(specimen -> submitSpecimenTree(specimen, response));
         } catch (FhirBundleSubmissionFailException ex) {
             LOG.error(ex);
         }
     }
 
-    private void submitSpecimenTree(Specimen specimen) {
+    private void submitSpecimenTree(Specimen specimen, FhirSubmissionResponse patientResponse) {
         final String specimenUrl = URL + SPECIMEN + QUERY_STRING;
 
         try {
             FhirSubmissionResponse response = HttpResponseExtractor
                     .parse(Post.post(specimen, specimenUrl, SPECIMEN_SERIALIZER, Specimen.class));
             specimen.setReference(response);
+            Map<String, FhirSubmissionResponse> observations = submitObservationTree(specimen, patientResponse);
+            mapObservationResponsesToSpecimen(specimen, observations);
             submitDiagnosticReportTree(specimen);
         } catch (FhirBundleSubmissionFailException ex) {
             LOG.error(ex);
+        }
+    }
+
+    private void mapObservationResponsesToSpecimen(Specimen specimen, Map<String, FhirSubmissionResponse> responses) {
+        Observations specimenObservations = specimen.getObservations();
+
+        for (Observation observation : specimenObservations.getObservations()) {
+            Glstrings glstrings = observation.getGlstrings();
+            Glstring glstring = glstrings.getGlstrings().stream().findFirst().get();
+            String glAllele = pullGlStringAllele(glstring.getValue());
+            FhirSubmissionResponse observationResponse = responses.get(glAllele);
+            observation.setValue(observationResponse);
+        }
+    }
+
+    private Map<String, FhirSubmissionResponse> submitObservationTree(Specimen specimen, FhirSubmissionResponse specimenResponse) {
+        Observations observations = specimen.getObservations();
+        Map<String, FhirSubmissionResponse> observationResponses = new HashMap<>();
+
+        final String observationUrl = URL + OBSERVATION + QUERY_STRING;
+
+        try {
+            for (Observation observation : observations.getObservations()) {
+                observation.setReference(specimenResponse);
+                Glstrings glstrings = observation.getGlstrings();
+                Glstring glstring = glstrings.getGlstrings().stream().findFirst().get();
+                String genotype = pullGlStringAllele(glstring.getValue());
+                FhirSubmissionResponse response = HttpResponseExtractor
+                        .parse(Post.post(observation, observationUrl, OBSERVATION_SERIALIZER, Observation.class));
+
+                observationResponses.put(genotype, response);
+            }
+        } catch (FhirBundleSubmissionFailException ex) {
+            LOG.error(ex);
+        } finally {
+            return observationResponses;
         }
     }
 
@@ -174,5 +215,10 @@ public class FhirMessageUtil {
                        .filter(Objects::nonNull)
                        .anyMatch(ant -> ant.getClass().equals(annotation)))
                .collect(Collectors.toList());
+    }
+
+    private String pullGlStringAllele(String allele) {
+        String[] parts = allele.split(SPLIT_CHAR_GL_STRING);
+        return parts[0];
     }
 }

@@ -69,6 +69,7 @@ public class ObservationJsonSerializer implements JsonSerializer<Observation> {
         JsonObject subject = new JsonObject();
         Glstrings glstrings = src.getGlstrings();
         List<String> glstringValues = new ArrayList<>();
+        FhirSubmissionResponse response = (FhirSubmissionResponse) src.getReference();
 
         for (Glstring glstring : glstrings.getGlstrings()) {
             glstringValues.add(glstring.getValue());

@@ -33,7 +33,6 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.log4j.Logger;
-import org.nmdp.fhirsubmission.serialization.ObservationJsonSerializer;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -44,9 +43,10 @@ public class Post {
     private static final String HEADER_KEY = "Content-Type";
     private static final String HEADER_VALUE = "application/json";
     private static Gson GSON = new GsonBuilder().create();
-    private static final HttpClient CLIENT = HttpClientBuilder.create().build();
+    //private static final HttpClient CLIENT = HttpClientBuilder.create().build();
 
     public static <T> HttpResponse post(T data, String url, JsonSerializer serializer, Class<T> clazz) {
+        HttpClient client = HttpClientBuilder.create().build();
         HttpPost post = new HttpPost(url);
         HttpResponse response = null;
 
@@ -65,7 +65,8 @@ public class Post {
             StringEntity entity = new StringEntity(json);
             post.setEntity(entity);
             post.setHeader(HEADER_KEY, HEADER_VALUE);
-            response = CLIENT.execute(post);
+            //response = CLIENT.execute(post);
+            response = client.execute(post);
         } catch (UnsupportedEncodingException ex) {
             LOG.error(ex);
         } catch (IOException ex) {
