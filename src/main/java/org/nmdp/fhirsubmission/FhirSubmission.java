@@ -29,7 +29,14 @@ import org.nmdp.fhirsubmission.util.FhirMessageUtil;
 
 public class FhirSubmission {
 
-    public void submitPreFhirBundle(FhirMessage fhirMessage) {
-        FhirMessageUtil fhirUtil = new FhirMessageUtil();
+
+    private final FhirMessageUtil fhirUtil;
+
+    public FhirSubmission() {
+        fhirUtil = new FhirMessageUtil();
+    }
+
+    public org.nmdp.hmlfhirmongo.models.FhirSubmission submitPreFhirBundle(FhirMessage fhirMessage) throws Exception {
+        return fhirUtil.submit(fhirMessage);
     }
 }
