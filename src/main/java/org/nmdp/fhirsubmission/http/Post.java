@@ -43,10 +43,10 @@ public class Post {
     private static final String HEADER_KEY = "Content-Type";
     private static final String HEADER_VALUE = "application/json";
     private static Gson GSON = new GsonBuilder().create();
-    //private static final HttpClient CLIENT = HttpClientBuilder.create().build();
+    private static final HttpClient CLIENT = HttpClientBuilder.create().build();
 
     public static <T> HttpResponse post(T data, String url, JsonSerializer serializer, Class<T> clazz) {
-        HttpClient client = HttpClientBuilder.create().build();
+        //HttpClient client = HttpClientBuilder.create().build();
         HttpPost post = new HttpPost(url);
         HttpResponse response = null;
 
@@ -66,7 +66,7 @@ public class Post {
             post.setEntity(entity);
             post.setHeader(HEADER_KEY, HEADER_VALUE);
             //response = CLIENT.execute(post);
-            response = client.execute(post);
+            response = CLIENT.execute(post);
         } catch (UnsupportedEncodingException ex) {
             LOG.error(ex);
         } catch (IOException ex) {

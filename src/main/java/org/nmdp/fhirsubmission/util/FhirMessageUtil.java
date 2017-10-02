@@ -30,6 +30,7 @@ import org.nmdp.fhirsubmission.FhirSubmission;
 import org.nmdp.fhirsubmission.exceptions.FhirBundleSubmissionFailException;
 import org.nmdp.fhirsubmission.http.Post;
 import org.nmdp.fhirsubmission.object.FhirSubmissionResponse;
+import org.nmdp.fhirsubmission.object.HmlSubmission;
 import org.nmdp.fhirsubmission.serialization.DiagnosticReportJsonSerializer;
 import org.nmdp.fhirsubmission.serialization.ObservationJsonSerializer;
 import org.nmdp.fhirsubmission.serialization.PatientJsonSerializer;
@@ -64,40 +65,48 @@ public class FhirMessageUtil {
 
     private static final Logger LOG = Logger.getLogger(FhirMessageUtil.class);
 
-    public org.nmdp.hmlfhirmongo.models.FhirSubmission submit(FhirMessage fhirMessage) throws Exception {
+    public List<HmlSubmission> submit(FhirMessage fhirMessage) throws Exception {
         org.nmdp.hmlfhirmongo.models.FhirSubmission fhirSubmission = new org.nmdp.hmlfhirmongo.models.FhirSubmission();
         List<Patient> patients = getPrimaryResources(fhirMessage);
-        patients.forEach(patient -> submitPatientTree(patient, fhirSubmission));
+        List<HmlSubmission> submissions = new ArrayList<>();
+        patients.forEach(patient -> submissions.add(submitPatientTree(patient, fhirSubmission)));
 
-        return fhirSubmission;
+        return submissions;
     }
 
-    private org.nmdp.hmlfhirmongo.models.FhirSubmission submitPatientTree(Patient patient, org.nmdp.hmlfhirmongo.models.FhirSubmission fhirSubmission) {
+    private HmlSubmission submitPatientTree(Patient patient, org.nmdp.hmlfhirmongo.models.FhirSubmission fhirSubmission) {
         final String patientUrl = URL + PATIENT + QUERY_STRING;
+        HmlSubmission submission = new HmlSubmission();
+
+        submission.setPatientId(String.format("%s*%s", patient.getIdentifier().getSystem(), patient.getIdentifier().getValue()));
 
         try {
             FhirSubmissionResponse response = HttpResponseExtractor
                     .parse(Post.post(patient, patientUrl, PATIENT_SERIALIZER, Patient.class));
+            submission.setPatientResource(response);
             List<Specimen> specimens = patient.getSpecimens().getSpecimens();
             specimens.forEach(specimen -> specimen.setSubject(response));
-            specimens.forEach(specimen -> submitSpecimenTree(specimen, response, fhirSubmission));
+            specimens.forEach(specimen -> submitSpecimenTree(specimen, response, fhirSubmission, submission));
         } catch (FhirBundleSubmissionFailException ex) {
             LOG.error(ex);
         } finally {
-            return fhirSubmission;
+            return submission;
         }
     }
 
-    private void submitSpecimenTree(Specimen specimen, FhirSubmissionResponse patientResponse, org.nmdp.hmlfhirmongo.models.FhirSubmission fhirSubmission) {
+    private void submitSpecimenTree(Specimen specimen, FhirSubmissionResponse patientResponse,
+        org.nmdp.hmlfhirmongo.models.FhirSubmission fhirSubmission, HmlSubmission submission) {
         final String specimenUrl = URL + SPECIMEN + QUERY_STRING;
 
         try {
             FhirSubmissionResponse response = HttpResponseExtractor
                     .parse(Post.post(specimen, specimenUrl, SPECIMEN_SERIALIZER, Specimen.class));
+            String specimenId = String.format("%s*%s", specimen.getIdentifier().getSystem(), specimen.getIdentifier().getValue());
+            submission.addSpecimen(specimenId, response);
             specimen.setReference(response);
-            Map<String, FhirSubmissionResponse> observations = submitObservationTree(specimen, patientResponse);
+            Map<String, FhirSubmissionResponse> observations = submitObservationTree(specimen, patientResponse, submission);
             mapObservationResponsesToSpecimen(specimen, observations);
-            submitDiagnosticReportTree(specimen, fhirSubmission);
+            submitDiagnosticReportTree(specimen, fhirSubmission, submission);
         } catch (FhirBundleSubmissionFailException ex) {
             LOG.error(ex);
         }
@@ -115,11 +124,12 @@ public class FhirMessageUtil {
         }
     }
 
-    private Map<String, FhirSubmissionResponse> submitObservationTree(Specimen specimen, FhirSubmissionResponse specimenResponse) {
+    private Map<String, FhirSubmissionResponse> submitObservationTree(Specimen specimen, FhirSubmissionResponse specimenResponse,
+        HmlSubmission submission) {
         Observations observations = specimen.getObservations();
+        final String observationUrl = URL + OBSERVATION + QUERY_STRING;
         Map<String, FhirSubmissionResponse> observationResponses = new HashMap<>();
 
-        final String observationUrl = URL + OBSERVATION + QUERY_STRING;
 
         try {
             for (Observation observation : observations.getObservations()) {
@@ -131,6 +141,7 @@ public class FhirMessageUtil {
                         .parse(Post.post(observation, observationUrl, OBSERVATION_SERIALIZER, Observation.class));
 
                 observationResponses.put(genotype, response);
+                submission.addObservation(genotype, response);
             }
         } catch (FhirBundleSubmissionFailException ex) {
             LOG.error(ex);
@@ -139,7 +150,7 @@ public class FhirMessageUtil {
         }
     }
 
-    private void submitDiagnosticReportTree(Specimen specimen, org.nmdp.hmlfhirmongo.models.FhirSubmission fhirSubmission) {
+    private void submitDiagnosticReportTree(Specimen specimen, org.nmdp.hmlfhirmongo.models.FhirSubmission fhirSubmission, HmlSubmission submission) {
         final String diagnosticReportUrl = URL + DIAGNOSTIC_REPORT + QUERY_STRING;
         String id = specimen.getIdentifier().getSystem() + ID_SEPARATOR + specimen.getIdentifier().getValue();
 
@@ -147,7 +158,8 @@ public class FhirMessageUtil {
             HttpResponse httpResponse = Post.post(specimen, diagnosticReportUrl, DIAGNOSTIC_REPORT_SERIALIZER, Specimen.class);
             FhirSubmissionResponse response = HttpResponseExtractor.parse(httpResponse);
             DiagnosticReport report = new DiagnosticReport();
-
+            String patientId = String.format("%s*%s", specimen.getIdentifier().getSystem(), specimen.getIdentifier().getValue());
+            submission.addDiagnosticReport(patientId, response);
             Status status;
 
             switch (httpResponse.getStatusLine().getStatusCode()) {
@@ -165,7 +177,7 @@ public class FhirMessageUtil {
 
             report.setStatus(status);
             report.setResult(response.getUrl());
-            fhirSubmission.addDiagnosticReport(id, report);
+            fhirSubmission.setSubmissionResult(submission);
         } catch (FhirBundleSubmissionFailException ex) {
             LOG.error(ex);
         }

@@ -24,8 +24,11 @@ package org.nmdp.fhirsubmission;
  * > http://www.opensource.org/licenses/lgpl-license.php
  */
 
+import org.nmdp.fhirsubmission.object.HmlSubmission;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.FhirMessage;
 import org.nmdp.fhirsubmission.util.FhirMessageUtil;
+
+import java.util.List;
 
 public class FhirSubmission {
 
@@ -36,7 +39,7 @@ public class FhirSubmission {
         fhirUtil = new FhirMessageUtil();
     }
 
-    public org.nmdp.hmlfhirmongo.models.FhirSubmission submitPreFhirBundle(FhirMessage fhirMessage) throws Exception {
+    public List<HmlSubmission> submitPreFhirBundle(FhirMessage fhirMessage) throws Exception {
         return fhirUtil.submit(fhirMessage);
     }
 }
