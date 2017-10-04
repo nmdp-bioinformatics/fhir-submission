@@ -158,7 +158,6 @@ public class FhirMessageUtil {
         try {
             HttpResponse httpResponse = Post.post(specimen, diagnosticReportUrl, DIAGNOSTIC_REPORT_SERIALIZER, Specimen.class);
             FhirSubmissionResponse response = HttpResponseExtractor.parse(httpResponse);
-            DiagnosticReport report = new DiagnosticReport();
             String patientId = String.format("%s*%s", specimen.getIdentifier().getSystem(), specimen.getIdentifier().getValue());
             submission.addDiagnosticReport(patientId, response);
             Status status;
@@ -176,8 +175,8 @@ public class FhirMessageUtil {
                     break;
             }
 
-            report.setStatus(status);
-            report.setResult(response.getUrl());
+            fhirSubmission.setComplete(status == Status.COMPLETE);
+            fhirSubmission.setError(status == Status.ERROR);
             fhirSubmission.addSubmissionResult(submission);
         } catch (FhirBundleSubmissionFailException ex) {
             LOG.error(ex);
