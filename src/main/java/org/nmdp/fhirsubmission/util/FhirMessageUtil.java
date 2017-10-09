@@ -24,6 +24,9 @@ package org.nmdp.fhirsubmission.util;
  * > http://www.opensource.org/licenses/lgpl-license.php
  */
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import org.apache.http.HttpResponse;
 import org.apache.log4j.Logger;
 import org.nmdp.fhirsubmission.FhirSubmission;
@@ -31,10 +34,7 @@ import org.nmdp.fhirsubmission.exceptions.FhirBundleSubmissionFailException;
 import org.nmdp.fhirsubmission.http.Post;
 import org.nmdp.fhirsubmission.object.FhirSubmissionResponse;
 import org.nmdp.fhirsubmission.object.HmlSubmission;
-import org.nmdp.fhirsubmission.serialization.DiagnosticReportJsonSerializer;
-import org.nmdp.fhirsubmission.serialization.ObservationJsonSerializer;
-import org.nmdp.fhirsubmission.serialization.PatientJsonSerializer;
-import org.nmdp.fhirsubmission.serialization.SpecimenJsonSerializer;
+import org.nmdp.fhirsubmission.serialization.*;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.*;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Glstrings;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Observations;
@@ -62,10 +62,14 @@ public class FhirMessageUtil {
     private static final SpecimenJsonSerializer SPECIMEN_SERIALIZER = new SpecimenJsonSerializer();
     private static final DiagnosticReportJsonSerializer DIAGNOSTIC_REPORT_SERIALIZER = new DiagnosticReportJsonSerializer();
     private static final ObservationJsonSerializer OBSERVATION_SERIALIZER = new ObservationJsonSerializer();
+    private static final BundleJsonSerialilzer BUNDLE_JSON_SERIALILZER = new BundleJsonSerialilzer();
 
     private static final Logger LOG = Logger.getLogger(FhirMessageUtil.class);
 
     public org.nmdp.hmlfhirmongo.models.FhirSubmission submit(FhirMessage fhirMessage) throws Exception {
+        Post.post(fhirMessage, "", BUNDLE_JSON_SERIALILZER, FhirMessage.class);
+
+
         org.nmdp.hmlfhirmongo.models.FhirSubmission fhirSubmission = new org.nmdp.hmlfhirmongo.models.FhirSubmission();
         List<Patient> patients = getPrimaryResources(fhirMessage);
         List<HmlSubmission> submissions = new ArrayList<>();
