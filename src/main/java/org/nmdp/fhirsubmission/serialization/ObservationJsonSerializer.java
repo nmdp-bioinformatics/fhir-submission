@@ -87,7 +87,10 @@ public class ObservationJsonSerializer implements JsonSerializer<Observation> {
         codeCoding.addProperty(DISPLAY_KEY, glsv);
         code.add(CODING_KEY, codeCoding);
 
-        subject.addProperty(REFERENCE_KEY, response.getUrl());
+        if (response != null) {
+            subject.addProperty(REFERENCE_KEY, response.getUrl());
+        }
+
         subject.addProperty(DISPLAY_KEY, BLANK);
 
         obs.add(SUBJECT_KEY, subject);

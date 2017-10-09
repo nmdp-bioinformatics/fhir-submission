@@ -26,13 +26,16 @@ package org.nmdp.fhirsubmission.serialization;
 
 import com.google.gson.*;
 
+import org.apache.log4j.Logger;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.*;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Patients;
+import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Specimens;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.*;
 
 public class BundleJsonSerialilzer implements JsonSerializer<FhirMessage> {
 
@@ -45,34 +48,45 @@ public class BundleJsonSerialilzer implements JsonSerializer<FhirMessage> {
     private static String FULL_URL = "fullUrl";
     private static String GUID_PREFIX = "urn:uuid:";
 
+    private static final Logger LOG = Logger.getLogger(BundleJsonSerialilzer.class);
+
     @Override
     public JsonElement serialize(FhirMessage fhir, Type typeOfSource, JsonSerializationContext context) {
         JsonArray patientBundle = new JsonArray();
         Patients patients = fhir.getPatients();
         Gson patientJsonConverter = getConverter(Patient.class, new PatientJsonSerializer());
-        Gson diagnosticReportJsonConverter = getConverter(DiagnosticReport.class, new DiagnosticReportJsonSerializer());
-        Gson observationJsonConverter = getConverter(Observation.class, new ObservationJsonSerializer());
-        Gson specimenJsonConverter = getConverter(Specimen.class, new SpecimenJsonSerializer());
 
         for (Patient patient : patients.getPatients()) {
+            ExecutorService executorService = Executors.newFixedThreadPool(6);
             String patientJson = patientJsonConverter.toJson(patient);
-            List<String> specimensJson = new ArrayList<>();
-            List<String> diagnosticReportsJson = new ArrayList<>();
-            List<String> observationsJson = new ArrayList<>();
+            Specimens specimens = patient.getSpecimens();
 
-            patient.getSpecimens().getSpecimens().forEach(specimen ->
-                specimensJson.add(specimenJsonConverter.toJson(specimen)));
-
-            patient.getSpecimens().getSpecimens().forEach(specimen ->
-                observationsJson.add(observationJsonConverter.toJson(specimen)));
-
-            patient.getSpecimens().getSpecimens().forEach(specimen ->
-                diagnosticReportsJson.add(diagnosticReportJsonConverter.toJson(specimen)));
+            List<String> specimensJson = serializeToJson(getConverter(Specimen.class, new SpecimenJsonSerializer()), specimens.getSpecimens(), executorService);
+            List<String> diagnosticReportsJson = serializeToJson(getConverter(DiagnosticReport.class, new DiagnosticReportJsonSerializer()), specimens.getSpecimens(), executorService);
+            List<String> observationsJson = serializeToJson(getConverter(Observation.class, new ObservationJsonSerializer()), specimens.getSpecimens(), executorService);
 
             patientBundle.add(combine(patientJson, specimensJson, observationsJson, diagnosticReportsJson));
         }
 
         return patientBundle;
+    }
+
+    private List<String> serializeToJson(Gson gson, List<Specimen> specimens, ExecutorService executor) {
+        List<String> json = new ArrayList<>();
+
+        try {
+            for (Specimen specimen : specimens) {
+                Callable<String> callable = deserialize(specimen, gson);
+                Future<String> specimenJson = executor.submit(callable);
+                json.add(specimenJson.get());
+            }
+        } catch (InterruptedException ex) {
+             LOG.error(ex);
+        } catch (ExecutionException ex) {
+            LOG.error(ex);
+        } finally {
+            return json;
+        }
     }
 
     private JsonObject combine(String patientJson, List<String> specimenJson, List<String> observationJson,
@@ -83,6 +97,7 @@ public class BundleJsonSerialilzer implements JsonSerializer<FhirMessage> {
         String id = String.format("%s%s", GUID_PREFIX, UUID.randomUUID().toString());
 
         entry.add(createJsonObject(patientJson, gson, id));
+
         specimenJson.forEach(specimen -> entry.add(createJsonObject(specimen, gson, id)));
         observationJson.forEach(observation -> entry.add(createJsonObject(observation, gson, id)));
         diagnosticReportJson.forEach(diagnosticReport -> entry.add(createJsonObject(diagnosticReport, gson, id)));
@@ -100,6 +115,14 @@ public class BundleJsonSerialilzer implements JsonSerializer<FhirMessage> {
         json.addProperty(FULL_URL, id);
 
         return json;
+    }
+
+    private Callable<String> deserialize(Specimen specimen, Gson gson) {
+        Callable<String> task = () -> {
+              return gson.toJson(specimen);
+        };
+
+        return task;
     }
 
     private <T> Gson getConverter(Class<T> clazz, JsonSerializer serializer) {

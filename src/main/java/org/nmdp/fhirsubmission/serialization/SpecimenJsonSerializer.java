@@ -72,8 +72,9 @@ public class SpecimenJsonSerializer implements JsonSerializer<Specimen> {
         coding.addProperty(DISPLAY_KEY, DISPLAY_VALUE);
         type.add(CODING_KEY, coding);
 
-
-        subject.addProperty(REFERENCE_KEY, response.getUrl());
+        if (response != null) {
+            subject.addProperty(REFERENCE_KEY, response.getUrl());
+        }
 
         specimen.addProperty(RESOURCE_TYPE_KEY, RESOURCE_TYPE);
         specimen.add(IDENTIFIER_KEY, identifier);

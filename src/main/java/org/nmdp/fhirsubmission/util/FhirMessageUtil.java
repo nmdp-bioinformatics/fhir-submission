@@ -54,6 +54,7 @@ public class FhirMessageUtil {
     private static final String SPECIMEN = "Specimen";
     private static final String DIAGNOSTIC_REPORT = "DiagnosticReport";
     private static final String OBSERVATION = "Observation";
+    private static final String BUNDLE = "Bundle";
 
     private static final String ID_SEPARATOR = "_";
     private static final String SPLIT_CHAR_GL_STRING = "\\*";
@@ -67,9 +68,15 @@ public class FhirMessageUtil {
     private static final Logger LOG = Logger.getLogger(FhirMessageUtil.class);
 
     public org.nmdp.hmlfhirmongo.models.FhirSubmission submit(FhirMessage fhirMessage) throws Exception {
-        Post.post(fhirMessage, "", BUNDLE_JSON_SERIALILZER, FhirMessage.class);
+        org.nmdp.hmlfhirmongo.models.FhirSubmission fhirSubmission = new org.nmdp.hmlfhirmongo.models.FhirSubmission();
+        List<HmlSubmission> submissions = new ArrayList<>();
+        final String bundleUrl = URL + BUNDLE + QUERY_STRING;
 
+        Post.postBatch(fhirMessage, bundleUrl, BUNDLE_JSON_SERIALILZER, FhirMessage.class);
+        return  fhirSubmission;
+    }
 
+    public org.nmdp.hmlfhirmongo.models.FhirSubmission submitNonBatch(FhirMessage fhirMessage) throws  Exception {
         org.nmdp.hmlfhirmongo.models.FhirSubmission fhirSubmission = new org.nmdp.hmlfhirmongo.models.FhirSubmission();
         List<Patient> patients = getPrimaryResources(fhirMessage);
         List<HmlSubmission> submissions = new ArrayList<>();

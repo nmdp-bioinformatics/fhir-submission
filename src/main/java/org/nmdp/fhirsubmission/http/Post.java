@@ -24,9 +24,7 @@ package org.nmdp.fhirsubmission.http;
  * > http://www.opensource.org/licenses/lgpl-license.php
  */
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonSerializer;
+import com.google.gson.*;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
@@ -36,6 +34,9 @@ import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public class Post {
 
@@ -55,8 +56,45 @@ public class Post {
     }
 
     public static <T> HttpResponse post(T data, String url, JsonSerializer serializer, Class<T> clazz) {
-        HttpClient client =  HttpClientBuilder.create().build();
+        HttpClient client = HttpClientBuilder.create().build();
         return sendPost(data, url, serializer, clazz, client);
+    }
+
+    public static <T> List<HttpResponse> postBatch(T data, String url, JsonSerializer serializer, Class<T> clazz) {
+        return sendBatchPost(data, url, serializer, clazz);
+    }
+
+    private static <T> List<HttpResponse> sendBatchPost(T data, String url, JsonSerializer serializer, Class<T> clazz) {
+        HttpClient client = HttpClientBuilder.create().build();
+        List<HttpResponse> responses = new ArrayList<>();
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        gsonBuilder.registerTypeAdapter(clazz, serializer);
+        Gson gson = gsonBuilder.create();
+
+        try {
+            JsonArray bundles = (JsonArray) gson.toJsonTree(data);
+            Iterator iterator = bundles.iterator();
+
+            while (iterator.hasNext()) {
+                JsonObject json = (JsonObject) iterator.next();
+                responses.add(sendPost(gson.toJson(json), url, client));
+            }
+        } catch (UnsupportedEncodingException ex) {
+            LOG.error(ex);
+        } catch (IOException ex) {
+            LOG.error(ex);
+        } finally {
+            return responses;
+        }
+    }
+
+    private static HttpResponse sendPost(String data, String url, HttpClient client) throws UnsupportedEncodingException, IOException {
+        HttpPost post = new HttpPost(url);
+        StringEntity entity = new StringEntity(data);
+        post.setEntity(entity);
+        post.setHeader(HEADER_KEY, HEADER_VALUE);
+
+        return client.execute(post);
     }
 
     private static <T> HttpResponse sendPost(T data, String url, JsonSerializer serializer, Class<T> clazz, HttpClient client) {
@@ -75,10 +113,7 @@ public class Post {
                 json = gson.toJson(data);
             }
 
-            StringEntity entity = new StringEntity(json);
-            post.setEntity(entity);
-            post.setHeader(HEADER_KEY, HEADER_VALUE);
-            response = client.execute(post);
+            return sendPost(json, url, client);
         } catch (UnsupportedEncodingException ex) {
             LOG.error(ex);
         } catch (IOException ex) {
