@@ -25,6 +25,7 @@ package org.nmdp.fhirsubmission.object;
  */
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 
@@ -33,6 +34,12 @@ public class BundleSubmission {
     private Map<String, String> specimens;
     private Map<String, String> diangosticReports;
     private Map<String, List<String>> observations;
+
+    public BundleSubmission() {
+        this.specimens = new HashMap<>();
+        this.diangosticReports = new HashMap<>();
+        this.observations = new HashMap<>();
+    }
 
     public String getPatient() {
         return patient;

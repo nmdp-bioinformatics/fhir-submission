@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 import org.nmdp.fhirsubmission.FhirSubmission;
 import org.nmdp.fhirsubmission.exceptions.FhirBundleSubmissionFailException;
 import org.nmdp.fhirsubmission.http.Post;
+import org.nmdp.fhirsubmission.object.BundleSubmission;
 import org.nmdp.fhirsubmission.object.FhirSubmissionResponse;
 import org.nmdp.fhirsubmission.object.HmlSubmission;
 import org.nmdp.fhirsubmission.serialization.*;
@@ -63,16 +64,16 @@ public class FhirMessageUtil {
     private static final SpecimenJsonSerializer SPECIMEN_SERIALIZER = new SpecimenJsonSerializer();
     private static final DiagnosticReportJsonSerializer DIAGNOSTIC_REPORT_SERIALIZER = new DiagnosticReportJsonSerializer();
     private static final ObservationJsonSerializer OBSERVATION_SERIALIZER = new ObservationJsonSerializer();
-    private static final BundleJsonSerialilzer BUNDLE_JSON_SERIALILZER = new BundleJsonSerialilzer();
 
     private static final Logger LOG = Logger.getLogger(FhirMessageUtil.class);
 
     public org.nmdp.hmlfhirmongo.models.FhirSubmission submit(FhirMessage fhirMessage) throws Exception {
         org.nmdp.hmlfhirmongo.models.FhirSubmission fhirSubmission = new org.nmdp.hmlfhirmongo.models.FhirSubmission();
         List<HmlSubmission> submissions = new ArrayList<>();
-        final String bundleUrl = URL + BUNDLE + QUERY_STRING;
-
-        Post.postBatch(fhirMessage, bundleUrl, BUNDLE_JSON_SERIALILZER, FhirMessage.class);
+        final String bundleUrl = URL;// + BUNDLE + QUERY_STRING;
+        ResourceBundler bundler = new ResourceBundler();
+        JsonArray bundle = bundler.serialize(fhirMessage);
+        Post.postBatch(bundleUrl, bundle);
         return  fhirSubmission;
     }
 

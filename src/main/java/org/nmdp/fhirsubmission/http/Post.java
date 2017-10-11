@@ -60,24 +60,20 @@ public class Post {
         return sendPost(data, url, serializer, clazz, client);
     }
 
-    public static <T> List<HttpResponse> postBatch(T data, String url, JsonSerializer serializer, Class<T> clazz) {
-        return sendBatchPost(data, url, serializer, clazz);
+    public static List<HttpResponse> postBatch(String url, JsonArray batch) {
+        return sendBatchPost(url, batch);
     }
 
-    private static <T> List<HttpResponse> sendBatchPost(T data, String url, JsonSerializer serializer, Class<T> clazz) {
+    private static List<HttpResponse> sendBatchPost(String url, JsonArray bundles) {
         HttpClient client = HttpClientBuilder.create().build();
         List<HttpResponse> responses = new ArrayList<>();
-        GsonBuilder gsonBuilder = new GsonBuilder();
-        gsonBuilder.registerTypeAdapter(clazz, serializer);
-        Gson gson = gsonBuilder.create();
 
         try {
-            JsonArray bundles = (JsonArray) gson.toJsonTree(data);
             Iterator iterator = bundles.iterator();
 
             while (iterator.hasNext()) {
                 JsonObject json = (JsonObject) iterator.next();
-                responses.add(sendPost(gson.toJson(json), url, client));
+                responses.add(sendPost(GSON.toJson(json), url, client));
             }
         } catch (UnsupportedEncodingException ex) {
             LOG.error(ex);

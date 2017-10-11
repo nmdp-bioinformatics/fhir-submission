@@ -50,7 +50,6 @@ public class DiagnosticReportJsonSerializer implements JsonSerializer<Specimen> 
     private static final String BASED_ON_KEY = "basedOn";
     private static final String CATEGORY_KEY = "category";
     private static final String RESOURCE_KEY = "resourceType";
-    private static final String VALUE_KEY = "value";
     private static final String RESULT_KEY = "result";
     private static final String SUBJECT_KEY = "subject";
     private static final String SPECIMEN_KEY = "specimen";
@@ -122,11 +121,15 @@ public class DiagnosticReportJsonSerializer implements JsonSerializer<Specimen> 
         categoryCoding.addProperty(DISPLAY_KEY, CATEGORY_CODE_DISPLAY);
         category.add(CODING_KEY, categoryCoding);
 
-        subject.addProperty(REFERENCE_KEY, response.getUrl());
-        subject.addProperty(DISPLAY_KEY, BLANK);
+        if (response != null) {
+            subject.addProperty(REFERENCE_KEY, response.getUrl());
+            subject.addProperty(DISPLAY_KEY, BLANK);
+        }
 
-        specimen.addProperty(REFERENCE_KEY, reference.getUrl());
-        specimen.addProperty(DISPLAY_KEY, BLANK);
+        if (reference != null) {
+            specimen.addProperty(REFERENCE_KEY, reference.getUrl());
+            specimen.addProperty(DISPLAY_KEY, BLANK);
+        }
 
         performer.addProperty(REFERENCE_KEY, REFERENCE_VALUE);
         performer.addProperty(DISPLAY_KEY, REFERENCE_DISPLAY_VALUE);
@@ -140,7 +143,11 @@ public class DiagnosticReportJsonSerializer implements JsonSerializer<Specimen> 
                 String glStringValue = glstring.getValue();
                 FhirSubmissionResponse observationResponse = (FhirSubmissionResponse) observation.getValue();
                 gls.add(glStringValue);
-                result.addProperty(REFERENCE_KEY, observationResponse.getUrl());
+
+                if (observationResponse != null) {
+                    result.addProperty(REFERENCE_KEY, observationResponse.getUrl());
+                }
+
                 result.addProperty(DISPLAY_KEY, glStringValue);
                 results.add(result);
             }
