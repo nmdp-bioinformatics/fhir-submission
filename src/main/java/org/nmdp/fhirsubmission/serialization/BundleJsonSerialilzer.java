@@ -43,6 +43,8 @@ public class BundleJsonSerialilzer implements JsonSerializer<FhirMessage> {
     private static String RESOURCE_TYPE_VALUE = "Bundle";
     private static String BUNDLE_TYPE_KEY = "type";
     private static String BUNDLE_TYPE_VALUE = "collection";
+    private static String SUBJECT_KEY = "subject";
+    private static String REFERENCE_KEY = "reference";
     private static String ENTRY = "entry";
     private static String RESOURCE = "resource";
     private static String FULL_URL = "fullUrl";
@@ -94,13 +96,12 @@ public class BundleJsonSerialilzer implements JsonSerializer<FhirMessage> {
         JsonObject bundle = new JsonObject();
         JsonArray entry = new JsonArray();
         Gson gson = new GsonBuilder().create();
-        String id = String.format("%s%s", GUID_PREFIX, UUID.randomUUID().toString());
+        String patientId = String.format("%s%s", GUID_PREFIX, UUID.randomUUID().toString());
 
-        entry.add(createJsonObject(patientJson, gson, id));
+        entry.add(createJsonObject(patientJson, gson, patientId, null));
 
-        specimenJson.forEach(specimen -> entry.add(createJsonObject(specimen, gson, id)));
-        observationJson.forEach(observation -> entry.add(createJsonObject(observation, gson, id)));
-        diagnosticReportJson.forEach(diagnosticReport -> entry.add(createJsonObject(diagnosticReport, gson, id)));
+        specimenJson.forEach(specimen ->
+                handleSpecimen(specimen, gson, patientId, entry, observationJson, diagnosticReportJson));
 
         bundle.addProperty(RESOURCE_TYPE_KEY, RESOURCE_TYPE_VALUE);
         bundle.addProperty(BUNDLE_TYPE_KEY, BUNDLE_TYPE_VALUE);
@@ -109,10 +110,46 @@ public class BundleJsonSerialilzer implements JsonSerializer<FhirMessage> {
         return bundle;
     }
 
-    private JsonObject createJsonObject(String str, Gson gson, String id) {
+    private void handleSpecimen(String specimen, Gson gson, String patientId, JsonArray entry,
+                                List<String> observations, List<String> diagnosticReports) {
+        String specimenId = String.format("%s%s", GUID_PREFIX, UUID.randomUUID().toString());
+        entry.add(createJsonObject(specimen, gson, specimenId, patientId));
+        handleObservations(observations, gson, specimenId, entry);
+        handleDiagnsoticReports(diagnosticReports, gson, specimenId, entry);
+    }
+
+    private void handleObservations(List<String> observations, Gson gson, String specimenId, JsonArray entry) {
+        for (String observation : observations) {
+            String observationId = String.format("%s%s", GUID_PREFIX, UUID.randomUUID().toString());
+            entry.add(createJsonObject(observation, gson, observationId, specimenId));
+        }
+    }
+
+    private void handleDiagnsoticReports(List<String> diagnosticReports, Gson gson, String specimenId, JsonArray entry) {
+        for (String diagnosticReport : diagnosticReports) {
+            String diagnosticReportId = String.format("%s%s", GUID_PREFIX, UUID.randomUUID().toString());
+            entry.add(createJsonObject(diagnosticReport, gson, diagnosticReportId, specimenId));
+        }
+    }
+
+    private JsonObject createJsonObject(String str, Gson gson, String id, String refId) {
         JsonObject json = new JsonObject();
         json.add(RESOURCE, gson.toJsonTree(str));
         json.addProperty(FULL_URL, id);
+
+        if (refId != null) {
+            json = addReferenceToObject(refId, json);
+        }
+
+        return json;
+    }
+
+    private JsonObject addReferenceToObject(String refId, JsonObject json) {
+        JsonObject subjectJson = new JsonObject();
+
+        subjectJson.addProperty(REFERENCE_KEY, refId);
+        json.remove(SUBJECT_KEY);
+        json.add(SUBJECT_KEY, subjectJson);
 
         return json;
     }
