@@ -52,7 +52,11 @@ public class ResourceBundler {
     private static final String RESOURCE_TYPE_VALUE = "Bundle";
     private static final String BUNDLE_TYPE_KEY = "type";
 //    private static final String BUNDLE_TYPE_VALUE = "collection";
-private static final String BUNDLE_TYPE_VALUE = "transaction";
+    private static final String BUNDLE_TYPE_VALUE = "transaction";
+    private static final String REQUEST_METHOD_KEY = "method";
+    private static final String REQUEST_METOHD_VALUE = "POST";
+    private static final String REQUEST_URL_KEY = "url";
+    private static final String REQUEST_KEY = "request";
     private static final String SUBJECT_KEY = "subject";
     private static final String SPECIMEN_KEY = "specimen";
     private static final String REFERENCE_KEY = "reference";
@@ -60,6 +64,10 @@ private static final String BUNDLE_TYPE_VALUE = "transaction";
     private static final String RESOURCE = "resource";
     private static final String FULL_URL = "fullUrl";
     private static final String GUID_PREFIX = "urn:uuid:";
+    private static final String PATIENT_RESOURCE = "Patient";
+    private static final String SPECIMEN_RESOURCE = "Specimen";
+    private static final String OBSERVATION_RESOURCE = "Observation";
+    private static final String DIAGNOSTIC_REPORT_RESOURCE = "DiagnosticReport";
 
     private static final Logger LOG = Logger.getLogger(ResourceBundler.class);
 
@@ -124,21 +132,22 @@ private static final String BUNDLE_TYPE_VALUE = "transaction";
     private void handleBundle(BundleSubmission bundle, Gson gson, String patientId, JsonArray entry) {
         for (Map.Entry<String, String> specimen : bundle.getSpecimens().entrySet()) {
             String specimenId = specimen.getKey();
-            entry.add(createJsonObject(bundle.getPatient(), gson, patientId, null, null));
-            entry.add(createJsonObject(specimen.getValue(), gson, specimenId, patientId, null));
+            entry.add(createJsonObject(bundle.getPatient(), gson, PATIENT_RESOURCE, patientId, null, null));
+            entry.add(createJsonObject(specimen.getValue(), gson, SPECIMEN_RESOURCE, specimenId, patientId, null));
             String diagnosticReportId = String.format("%s%s", GUID_PREFIX, UUID.randomUUID().toString());
             String diagnosticReport = bundle.getDiangosticReports().getOrDefault(specimenId, null);
-            entry.add(createJsonObject(diagnosticReport, gson, diagnosticReportId, patientId, specimenId));
+            entry.add(createJsonObject(diagnosticReport, gson, DIAGNOSTIC_REPORT_RESOURCE, diagnosticReportId, patientId, specimenId));
             List<String> observations = bundle.getObservations().getOrDefault(specimenId, new ArrayList<>());
             for (String observation : observations) {
                 String observationId = String.format("%s%s", GUID_PREFIX, UUID.randomUUID().toString());
-                entry.add(createJsonObject(observation, gson, observationId, specimenId, null));
+                entry.add(createJsonObject(observation, gson, OBSERVATION_RESOURCE, observationId, specimenId, null));
             }
         }
     }
 
-    private JsonObject createJsonObject(String str, Gson gson, String id, String refId, String specimenId) {
+    private JsonObject createJsonObject(String str, Gson gson, String resource, String id, String refId, String specimenId) {
         JsonObject json = new JsonObject();
+        JsonObject request = new JsonObject();
 
         if (str == null) {
             return json;
@@ -146,6 +155,8 @@ private static final String BUNDLE_TYPE_VALUE = "transaction";
 
         json.add(RESOURCE, gson.toJsonTree(str));
         json.addProperty(FULL_URL, id);
+        request.addProperty(REQUEST_METHOD_KEY, REQUEST_METOHD_VALUE);
+        request.addProperty(REQUEST_URL_KEY, resource);
 
         if (refId != null) {
             json = addReferenceToObject(refId, json);
@@ -156,6 +167,8 @@ private static final String BUNDLE_TYPE_VALUE = "transaction";
             specimen.addProperty(REFERENCE_KEY, specimenId);
             json.add(SPECIMEN_KEY, specimen);
         }
+
+        json.add(REQUEST_KEY, request);
 
         return json;
     }
