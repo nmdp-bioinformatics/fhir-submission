@@ -34,16 +34,18 @@ import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 public class Post {
 
     private static final Logger LOG = Logger.getLogger(Post.class);
     private static final String HEADER_KEY = "Content-Type";
     private static final String HEADER_VALUE = "application/json";
-    private static Gson GSON = new GsonBuilder().create();
+    private static final String DOUBLE_QUOTE = "\"";
+    private static final String BACKSLASH = "\\\\";
+    private static final String OPENING_BRACKET = "\\{";
+    private static final String RESOURCE_KEY = "resource";
+    private static final Gson GSON = new GsonBuilder().create();
 
     private final HttpClient CLIENT;
 
@@ -73,12 +75,24 @@ public class Post {
 
             while (iterator.hasNext()) {
                 JsonObject json = (JsonObject) iterator.next();
-                responses.add(sendPost(GSON.toJson(json), url, client));
+                String jsonString = GSON.toJson(json);
+                String jsonFormattedString = jsonString
+                        .replaceAll(String.format("%s%s%s%s", DOUBLE_QUOTE, OPENING_BRACKET, BACKSLASH, DOUBLE_QUOTE),
+                                String.format("%s%s", OPENING_BRACKET, DOUBLE_QUOTE));
+                jsonFormattedString = jsonFormattedString
+                        .replaceAll(String.format("}%s", DOUBLE_QUOTE), "}");
+                jsonFormattedString = jsonFormattedString
+                        .replaceAll(String.format("%s%s", BACKSLASH, DOUBLE_QUOTE), DOUBLE_QUOTE);
+
+                responses.add(sendPost(jsonFormattedString, url, client));
             }
         } catch (UnsupportedEncodingException ex) {
             LOG.error(ex);
         } catch (IOException ex) {
             LOG.error(ex);
+        } catch (Exception ex) {
+            LOG.error(ex);
+            throw ex;
         } finally {
             return responses;
         }
