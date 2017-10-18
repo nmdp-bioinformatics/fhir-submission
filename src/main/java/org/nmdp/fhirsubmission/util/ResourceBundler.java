@@ -51,8 +51,8 @@ public class ResourceBundler {
     private static final String RESOURCE_TYPE_KEY = "resourceType";
     private static final String RESOURCE_TYPE_VALUE = "Bundle";
     private static final String BUNDLE_TYPE_KEY = "type";
-    private static final String BUNDLE_TYPE_VALUE = "collection";
-    //private static final String BUNDLE_TYPE_VALUE = "transaction";
+    //private static final String BUNDLE_TYPE_VALUE = "collection";
+    private static final String BUNDLE_TYPE_VALUE = "transaction";
     private static final String REQUEST_METHOD_KEY = "method";
     private static final String REQUEST_METOHD_VALUE = "POST";
     private static final String REQUEST_URL_KEY = "url";
@@ -153,7 +153,8 @@ public class ResourceBundler {
             return json;
         }
 
-        json.add(RESOURCE, gson.toJsonTree(str));
+        JsonObject incoming = gson.fromJson(str, JsonObject.class);
+        json.add(RESOURCE, incoming);
         json.addProperty(FULL_URL, id);
         request.addProperty(REQUEST_METHOD_KEY, REQUEST_METOHD_VALUE);
         request.addProperty(REQUEST_URL_KEY, resource);
