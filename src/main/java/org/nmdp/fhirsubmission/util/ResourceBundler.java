@@ -27,6 +27,7 @@ package org.nmdp.fhirsubmission.util;
 import com.google.gson.*;
 
 import org.apache.log4j.Logger;
+import org.nmdp.fhirsubmission.object.BundleReference;
 import org.nmdp.fhirsubmission.object.BundleSubmission;
 import org.nmdp.fhirsubmission.serialization.DiagnosticReportJsonSerializer;
 import org.nmdp.fhirsubmission.serialization.ObservationJsonSerializer;
@@ -40,10 +41,7 @@ import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Observations;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Patients;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Specimens;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.*;
 
 public class ResourceBundler {
@@ -57,6 +55,7 @@ public class ResourceBundler {
     private static final String REQUEST_METOHD_VALUE = "POST";
     private static final String REQUEST_URL_KEY = "url";
     private static final String REQUEST_KEY = "request";
+    private static final String VALUE_KEY = "value";
     private static final String SUBJECT_KEY = "subject";
     private static final String SPECIMEN_KEY = "specimen";
     private static final String REFERENCE_KEY = "reference";
@@ -66,8 +65,10 @@ public class ResourceBundler {
     private static final String GUID_PREFIX = "urn:uuid:";
     private static final String PATIENT_RESOURCE = "Patient";
     private static final String SPECIMEN_RESOURCE = "Specimen";
+    private static final String DISPLAY_KEY = "display";
     private static final String OBSERVATION_RESOURCE = "Observation";
     private static final String DIAGNOSTIC_REPORT_RESOURCE = "DiagnosticReport";
+    private static final String RESULT_KEY = "result";
 
     private static final Logger LOG = Logger.getLogger(ResourceBundler.class);
 
@@ -132,20 +133,56 @@ public class ResourceBundler {
     private void handleBundle(BundleSubmission bundle, Gson gson, String patientId, JsonArray entry) {
         for (Map.Entry<String, String> specimen : bundle.getSpecimens().entrySet()) {
             String specimenId = specimen.getKey();
-            entry.add(createJsonObject(bundle.getPatient(), gson, PATIENT_RESOURCE, patientId, null, null));
-            entry.add(createJsonObject(specimen.getValue(), gson, SPECIMEN_RESOURCE, specimenId, patientId, null));
+            Map<String, BundleReference> specimenReferences = new HashMap<>();
+            Map<String, BundleReference> diagnosticReportReferences = new HashMap<>();
+            Map<String, BundleReference> observationReferences = new HashMap<>();
+
+            specimenReferences.put(SUBJECT_KEY, new BundleReference(patientId));
+            diagnosticReportReferences.put(SUBJECT_KEY, new BundleReference(patientId));
+            diagnosticReportReferences.put(SPECIMEN_KEY, new BundleReference(specimenId));
+            observationReferences.put(SUBJECT_KEY, new BundleReference(patientId));
+
+            entry.add(createJsonObject(bundle.getPatient(), gson, PATIENT_RESOURCE, patientId, new HashMap<>()));
+            entry.add(createJsonObject(specimen.getValue(), gson, SPECIMEN_RESOURCE, specimenId, specimenReferences));
             String diagnosticReportId = String.format("%s%s", GUID_PREFIX, UUID.randomUUID().toString());
             String diagnosticReport = bundle.getDiangosticReports().getOrDefault(specimenId, null);
-            entry.add(createJsonObject(diagnosticReport, gson, DIAGNOSTIC_REPORT_RESOURCE, diagnosticReportId, patientId, specimenId));
             List<String> observations = bundle.getObservations().getOrDefault(specimenId, new ArrayList<>());
+            Map<String, JsonObject> observationResults = new HashMap<>();
+
             for (String observation : observations) {
                 String observationId = String.format("%s%s", GUID_PREFIX, UUID.randomUUID().toString());
-                entry.add(createJsonObject(observation, gson, OBSERVATION_RESOURCE, observationId, specimenId, null));
+                JsonObject obs = createJsonObject(observation, gson, OBSERVATION_RESOURCE, observationId, observationReferences);
+                entry.add(obs);
+                observationResults.put(observationId, obs);
             }
+
+            diagnosticReport = handleDiagnosticReport(observationResults, diagnosticReport, gson);
+            entry.add(createJsonObject(diagnosticReport, gson, DIAGNOSTIC_REPORT_RESOURCE, diagnosticReportId, diagnosticReportReferences));
         }
     }
 
-    private JsonObject createJsonObject(String str, Gson gson, String resource, String id, String refId, String specimenId) {
+    private String handleDiagnosticReport(Map<String, JsonObject> observations, String diagnosticReport, Gson gson) {
+        JsonObject request = gson.fromJson(diagnosticReport, JsonObject.class);
+        JsonArray result = new JsonArray();
+
+        request.remove(RESULT_KEY);
+        observations.entrySet().forEach(observation -> result.add(createResultObject(observation.getValue())));
+        request.add(RESULT_KEY, result);
+
+        return gson.toJson(request);
+    }
+
+    private JsonObject createResultObject(JsonObject observation) {
+        JsonObject obs = new JsonObject();
+        JsonObject resource = observation.get(RESOURCE).getAsJsonObject();
+
+        obs.addProperty(DISPLAY_KEY, resource.get(VALUE_KEY).getAsString());
+        obs.addProperty(REFERENCE_KEY, observation.get(FULL_URL).getAsString());
+
+        return obs;
+    }
+
+    private JsonObject createJsonObject(String str, Gson gson, String resource, String id, Map<String, BundleReference> refs) {
         JsonObject json = new JsonObject();
         JsonObject request = new JsonObject();
 
@@ -159,14 +196,9 @@ public class ResourceBundler {
         request.addProperty(REQUEST_METHOD_KEY, REQUEST_METOHD_VALUE);
         request.addProperty(REQUEST_URL_KEY, resource);
 
-        if (refId != null) {
-            json = addReferenceToObject(refId, json);
-        }
-
-        if (specimenId != null) {
-            JsonObject specimen = new JsonObject();
-            specimen.addProperty(REFERENCE_KEY, specimenId);
-            json.add(SPECIMEN_KEY, specimen);
+        for (Map.Entry<String, BundleReference> ref : refs.entrySet()) {
+            BundleReference bundleReference = ref.getValue();
+            addReferenceToObject(bundleReference.getRefId(), ref.getKey(), json, bundleReference.getPropertyMap());
         }
 
         json.add(REQUEST_KEY, request);
@@ -174,14 +206,17 @@ public class ResourceBundler {
         return json;
     }
 
-    private JsonObject addReferenceToObject(String refId, JsonObject json) {
-        JsonObject subjectJson = new JsonObject();
+    private void addReferenceToObject(String refId, String propertyName, JsonObject json, List<String> propMap) {
+        JsonObject referenceJson = new JsonObject();
+        JsonObject mutableJson = new JsonObject();
 
-        subjectJson.addProperty(REFERENCE_KEY, refId);
-        json.remove(SUBJECT_KEY);
-        json.add(SUBJECT_KEY, subjectJson);
+        for (String pn : propMap) {
+            mutableJson = (JsonObject) json.get(pn);
+        }
 
-        return json;
+        referenceJson.addProperty(REFERENCE_KEY, refId);
+        mutableJson.remove(propertyName);
+        mutableJson.add(propertyName, referenceJson);
     }
 
     private Callable<String> deserialize(Object obj, Gson gson) {
