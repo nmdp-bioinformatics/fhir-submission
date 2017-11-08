@@ -71,7 +71,8 @@ public class ResourceBundler {
     private static final String CODE_VALUE = "51959-5";
     private static final String CODING_KEY = "coding";
     private static final String TYPE_KEY = "type";
-    private static final String DERIVED_FROM_KEY = "derivedFrom";
+    private static final String DERIVED_FROM_VALUE = "derived-from";
+    private static final String TARGET_KEY = "target";
 
     private static final Logger LOG = Logger.getLogger(ResourceBundler.class);
 
@@ -211,12 +212,12 @@ public class ResourceBundler {
         String id = String.format("%s%s", GUID_PREFIX, UUID.randomUUID().toString());
         JsonObject json = createJsonObject(data, gson, resourceType, id, references);
         JsonObject related = new JsonObject();
-        JsonObject type = new JsonObject();
-        JsonObject derrivedFrom = new JsonObject();
+        JsonObject target = new JsonObject();
 
-        derrivedFrom.addProperty(REFERENCE_KEY, sequenceObservationId);
-        type.add(DERIVED_FROM_KEY, derrivedFrom);
-        related.add(TYPE_KEY, type);
+        related.addProperty(TYPE_KEY, DERIVED_FROM_VALUE);
+        target.addProperty(REFERENCE_KEY, sequenceObservationId);
+
+        related.add(TARGET_KEY, target);
         json.add(RELATED_KEY, related);
         entry.add(json);
         idMap.put(id, json);
