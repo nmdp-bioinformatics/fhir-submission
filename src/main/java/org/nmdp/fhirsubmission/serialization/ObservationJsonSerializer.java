@@ -28,6 +28,7 @@ package org.nmdp.fhirsubmission.serialization;
 import com.google.gson.*;
 
 import org.nmdp.fhirsubmission.object.FhirSubmissionResponse;
+import org.nmdp.fhirsubmission.util.DateParser;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.*;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Glstrings;
 import org.nmdp.hmlfhirconvertermodels.domain.fhir.lists.Observations;
@@ -38,6 +39,7 @@ import java.lang.reflect.Type;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -81,7 +83,7 @@ public class ObservationJsonSerializer implements JsonSerializer<Observation> {
 
         obs.addProperty(RESOURCE_KEY, RESOURCE_VALUE);
         obs.addProperty(STATUS_KEY, STATUS_VALUE);
-        obs.addProperty(ISSUED_KEY, LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+        obs.addProperty(ISSUED_KEY, DateParser.parseDate(new Date()));
         obs.addProperty(VALUE_KEY, glsv);
 
         String[] alleleCodes = getAlleleCode(glsv).split(",");
